@@ -13,7 +13,7 @@ temp_cache_dir = tempfile.gettempdir()
 f1.Cache.enable_cache(temp_cache_dir)
 
 # Specify the seasons you want to fetch data for
-seasons = [2022, 2023, 2024]  # Add 2024 when it starts
+seasons = [2022, 2023, 2024]  # this doesn't work so manually enter the seasons and remove which ever.
 
 def fetch_season_data(season):
     # Get all races in the season
