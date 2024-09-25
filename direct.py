@@ -5,23 +5,23 @@ from datetime import datetime
 from hdfs import InsecureClient
 import tempfile
 
-# Create a temporary directory for caching
+# caching mc
 temp_cache_dir = tempfile.gettempdir()
 
 # Enable caching using the temporary directory
 f1.Cache.enable_cache(temp_cache_dir)
 
-# Specify the seasons you want to fetch data for
-seasons = [2024]
+# have to manually remove the seasons cuz i failed a simple for loop logic
+seasons = [2022, 2023, 2024]
 
 # Ergast API URL template
 ergast_url_template = "https://ergast.com/api/f1/{year}/{round}/laps.json"
 
-# List of session types to fetch (Free Practices, Qualifying, and Race)
+#  FP = Free Practices, Q = Qualifying, R = Race)
 session_types = ['FP1', 'FP2', 'FP3', 'Q', 'R']
 
 def fetch_season_data(season):
-    # Get all races in the season
+    
     races = f1.get_event_schedule(season)
     for index, race in races.iterrows():
         event = race['EventName']
@@ -29,12 +29,12 @@ def fetch_season_data(season):
         round_number = race['RoundNumber']
         print(f"Fetching data for {event} - Round {round_number}, {year}")
 
-        # Skip testing sessions
+        # Skip testing 
         if 'testing' in event.lower() or 'pre-season' in event.lower():
             print(f"Skipping testing event: {event}")
             continue
 
-        # Loop through all session types (FP1, FP2, FP3, Qualifying, Race)
+        # Loop 
         for session_type in session_types:
             print(f"Fetching {session_type} session for {event}.")
             try:
@@ -66,7 +66,7 @@ def fetch_from_ergast(year, round_number, event, session_type):
         response.raise_for_status()  # Raise exception for any failed request
         data = response.json()
         
-        # Process Ergast API response to extract lap data (customize this based on Ergast format)
+        # Process Ergast API response to extract lap data 
         if 'MRData' in data and 'RaceTable' in data['MRData']:
             races = data['MRData']['RaceTable']['Races']
             if races:
@@ -90,7 +90,7 @@ def fetch_from_ergast(year, round_number, event, session_type):
 def save_to_hdfs(df, season, event, session_type):
     # Save data to HDFS with session type in the path
     hdfs_path = f'/user/f1/data/{season}/{event}/{session_type}_laps.csv'
-    client = InsecureClient('http://localhost:9870', user='hadoop')
+    client = InsecureClient('<your local host and port 9870', user='<your user>')
     
     # Save DataFrame directly to CSV in HDFS
     with client.write(hdfs_path, encoding='utf-8', overwrite=True) as writer:
