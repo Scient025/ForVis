@@ -31,8 +31,7 @@ def update_data():
     df = load_data_from_hdfs(selected_year, selected_track, selected_session)
     transformed_data = transform_data(df, selected_driver)
     
-    # Update visualizations with transformed_data
-    # ... (Add code here to update your visualizations with transformed_data)
+    # need to put some telemetric data code here
 
 # Set up event listeners to call update_data() when selections change
 year_filter.on_change(update_data)
