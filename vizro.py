@@ -36,6 +36,11 @@ def update_data():
         selected_track = track_filter.value
         selected_session = session_filter.value
 
+    # Load data based on user selections
+    df = load_data_from_hdfs(selected_year, selected_track, selected_session)
+    transformed_data = transform_data(df, selected_driver)
+    
+    # need to put some telemetric data code here
         # Load data based on user selections
         df = load_data_from_hdfs(selected_year, selected_track, selected_session)
         if df is not None and not df.isEmpty():
