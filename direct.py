@@ -90,7 +90,7 @@ def fetch_from_ergast(year, round_number, event, session_type):
 def save_to_hdfs(df, season, event, session_type):
     # Save data to HDFS with session type in the path
     hdfs_path = f'/user/f1/data/{season}/{event}/{session_type}_laps.csv'
-    client = InsecureClient('<your local host and port 9870', user='<your user>')
+    client = InsecureClient('http://localhost:9870', user='hadoop')
     
     # Save DataFrame directly to CSV in HDFS
     with client.write(hdfs_path, encoding='utf-8', overwrite=True) as writer:
