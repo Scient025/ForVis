@@ -10,6 +10,7 @@ from fastf1 import plotting
 from matplotlib.lines import Line2D
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
+import fileConfig
 
 # enables cache, allows storage of race data locally
 # ff1.Cache.enable_cache('formula/cache')
@@ -79,7 +80,11 @@ def plot_laptime(race, input_data):
     ax.legend()
     plt.suptitle(f"Lap Time Comparison \n" f"{race.event.year} {race.event['EventName']} {input_data[2]}")
 
-    img_path = os.getcwd() + (f'/plot/{input_data[5]}.png')
+    # Ensure the plot directory exists
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
     plt.savefig(img_path, dpi = 200)
 
 # speed comaprison by distance for the fastest lap of both drivers

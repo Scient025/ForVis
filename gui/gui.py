@@ -8,22 +8,15 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QComboBox, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar, QMessageBox
-
-# Define your directory path
-cur_dir = 'C:\\Users\\bhate\\Documents\\gui\\'
-i = 'cache'  # or any other directory name
-
-# Create the full path
-full_path = os.path.join(cur_dir, i)
-
 # imports script.py, used for creating plots
 import script
+import fileConfig
 
 # paths for race data
-events = pd.read_csv('C:/Users/bhate/Documents/gui/data/events.csv')
-drivers = pd.read_csv('C:/Users/bhate/Documents/gui/data/drivers.csv')
-race_laps = pd.read_csv('C:/Users/bhate/Documents/gui/data/laps.csv')
-placeholder_path = 'C:/Users/bhate/Documents/gui/img/placeholder.png'
+events = pd.read_csv(fileConfig.EVENTS_CSV)
+drivers = pd.read_csv(fileConfig.DRIVERS_CSV)
+race_laps = pd.read_csv(fileConfig.RACE_LAPS_CSV)
+placeholder_path = fileConfig.PLACEHOLDER_IMG
 
 # active race years
 year = events.columns
@@ -83,7 +76,7 @@ class MainWindow(QWidget):
         self.setFixedSize(880, 525)
         self.move(200, 100)
         self.setWindowTitle('Formula 1 Telemetry Analytics')
-        self.setWindowIcon(QtGui.QIcon('C:/Users/bhate/Documents/gui/img/f1.png'))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(fileConfig.IMG_DIR, 'f1.png')))
 
     def UIComponents(self):
         options_layout = QVBoxLayout()
@@ -211,7 +204,7 @@ class MainWindow(QWidget):
             self.save_button.hide()
             self.pbar.show()
             script.get_race_data(input_data)
-            self.plot_path = f'C:/Users/bhate/Documents/gui/plot/{input_data[5]}.png'  # Use full path
+            self.plot_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
             self.display_plot(self.plot_path)
             self.pbar.hide()
             self.run_button.setText('Run New Analysis')
