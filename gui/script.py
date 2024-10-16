@@ -80,12 +80,10 @@ def plot_laptime(race, input_data):
     ax.legend()
     plt.suptitle(f"Lap Time Comparison \n" f"{race.event.year} {race.event['EventName']} {input_data[2]}")
 
-    # Ensure the plot directory exists
     if not os.path.exists(fileConfig.PLOT_DIR):
         os.makedirs(fileConfig.PLOT_DIR)
-
     img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
-    plt.savefig(img_path, dpi = 200)
+    plt.savefig(img_path, dpi=700)
 
 # speed comaprison by distance for the fastest lap of both drivers
 # returns a saved version of the generated plot
@@ -111,8 +109,10 @@ def plot_fastest_lap(race, input_data):
     ax.legend()
     plt.suptitle(f"Fastest Lap Comparison \n" f"{race.event.year} {race.event['EventName']} {input_data[2]}")
 
-    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
-    plt.savefig(img_path, dpi = 700)
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
+    plt.savefig(img_path, dpi=700)
 
 
 # compares the sector speeds for each driver, and generates a map of the circuit, with color coded sectors for the fastest driver.
@@ -191,8 +191,10 @@ def plot_fastest_sectors(race, input_data):
 
     plt.legend(legend_lines, [input_data[3], input_data[4]])
 
-    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
-    plt.savefig(img_path, dpi = 200)
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
+    plt.savefig(img_path, dpi=700)
 
 # plots a speed, throttle, brake, rpm, gear, and drs comparison for both drivers
 # returns a saved version of the generated plot
@@ -238,5 +240,7 @@ def plot_full_telemetry(race, input_data): # speed, throttle, brake, rpm, gear, 
 
     ax[0].legend(legend_lines, [input_data[3], input_data[4]], loc = 'lower right', prop={'size': 5})
 
-    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
-    plt.savefig(img_path, dpi = 200)
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
+    plt.savefig(img_path, dpi=700)
