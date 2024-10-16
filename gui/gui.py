@@ -3,6 +3,8 @@ import sys
 import shutil
 import threading
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QPixmap
@@ -13,6 +15,7 @@ from PyQt5.QtWidgets import (QComboBox, QApplication, QWidget,
 
 import script
 import fileConfig
+from model import collect_race_data, prepare_data_for_model, predict
 
 # paths for race data
 events = pd.read_csv(fileConfig.EVENTS_CSV)
@@ -139,6 +142,10 @@ class MainWindow(QMainWindow):
         self.run_button.setStyleSheet(f"font-size: {self.font_size(14)}px;")
         form_layout.addWidget(self.run_button)
 
+        self.visualize_button = QPushButton("Visualize Predictions")
+        self.visualize_button.setStyleSheet(f"font-size: {self.font_size(14)}px;")
+        form_layout.addWidget(self.visualize_button)
+
         self.save_button = QPushButton("Save Plot to Desktop")
         self.save_button.setStyleSheet(f"font-size: {self.font_size(14)}px;")
         form_layout.addWidget(self.save_button)
@@ -160,6 +167,7 @@ class MainWindow(QMainWindow):
         # Connect signals
         self.run_button.clicked.connect(self.thread_script)
         self.save_button.clicked.connect(self.save_plot)
+        self.visualize_button.clicked.connect(self.visualize_predictions)
         self.drop_year.currentTextChanged.connect(self.update_lists)
         self.drop_analysis.currentTextChanged.connect(self.add_laps)
         self.drop_grand_prix.currentTextChanged.connect(self.update_laps)
@@ -242,8 +250,13 @@ class MainWindow(QMainWindow):
             self.lap_number.clear()
             lap_val = ['Select Lap']
             race = self.drop_grand_prix.currentText()
-            total_laps = race_laps.loc[race_laps.event == race, 'laps'].values[0]
-            lap_val.extend(map(str, range(1, total_laps + 1)))
+            # Get total laps safely
+            total_laps = race_laps.loc[race_laps.event == race, 'laps']
+            if not total_laps.empty:
+                total_laps = total_laps.values[0]
+                lap_val.extend(map(str, range(1, total_laps + 1)))
+            else:
+                QMessageBox.warning(self, "Warning", "No laps found for the selected race.")
             self.lap_number.addItems(lap_val)
 
     def update_lists(self):
@@ -257,6 +270,26 @@ class MainWindow(QMainWindow):
             self.drop_grand_prix.addItems(valid_grand_prix)
             self.drop_driver1.addItems(valid_drivers)
             self.drop_driver2.addItems(valid_drivers)
+
+    def visualize_predictions(self):
+        try:
+            year = int(self.drop_year.currentText())
+            race_round = self.drop_grand_prix.currentText()
+            race_data = collect_race_data(year, race_round)
+            X, y = prepare_data_for_model(race_data)
+
+            plt.figure(figsize=(14, 10))
+            sns.scatterplot(data=race_data, x='AvgLapTime', y='LapTime', hue='Driver', style='PitStop', alpha=0.7)
+            plt.title(f'Lap Time vs. Average Lap Time for Year {year} and Race {race_round}')
+            plt.xlabel('Average Lap Time (s)')
+            plt.ylabel('Lap Time (s)')
+            plt.axhline(race_data['AvgLapTime'].mean(), color='red', linestyle='--', label='Mean Avg Lap Time')
+            plt.legend()
+            plt.show()
+        except ValueError:
+            QMessageBox.critical(self, "Input Error", "Please select valid year and race.")
+        except Exception as e:
+            QMessageBox.critical(self, "Visualization Error", str(e))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

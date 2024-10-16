@@ -133,7 +133,7 @@ def plot_fastest_sectors(race, input_data):
             driver_telemtry['Driver'] = driver
             driver_telemtry['Lap'] = lap[1]['LapNumber']
 
-            telemetry = telemetry._append(driver_telemtry)
+            telemetry = telemetry.append(driver_telemtry)
 
     # keeping important columns
     telemetry = telemetry[['Lap', 'Distance', 'Driver', 'Speed', 'X', 'Y']]
