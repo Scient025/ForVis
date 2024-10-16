@@ -111,7 +111,7 @@ def plot_fastest_lap(race, input_data):
     ax.legend()
     plt.suptitle(f"Fastest Lap Comparison \n" f"{race.event.year} {race.event['EventName']} {input_data[2]}")
 
-    img_path = os.getcwd() + (f'/plot/{input_data[5]}.png')
+    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
     plt.savefig(img_path, dpi = 700)
 
 
@@ -133,7 +133,7 @@ def plot_fastest_sectors(race, input_data):
             driver_telemtry['Driver'] = driver
             driver_telemtry['Lap'] = lap[1]['LapNumber']
 
-            telemetry = telemetry.append(driver_telemtry)
+            telemetry = telemetry._append(driver_telemtry)
 
     # keeping important columns
     telemetry = telemetry[['Lap', 'Distance', 'Driver', 'Speed', 'X', 'Y']]
@@ -191,7 +191,7 @@ def plot_fastest_sectors(race, input_data):
 
     plt.legend(legend_lines, [input_data[3], input_data[4]])
 
-    img_path = os.getcwd() + (f'/plot/{input_data[5]}.png')
+    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
     plt.savefig(img_path, dpi = 200)
 
 # plots a speed, throttle, brake, rpm, gear, and drs comparison for both drivers
@@ -238,5 +238,5 @@ def plot_full_telemetry(race, input_data): # speed, throttle, brake, rpm, gear, 
 
     ax[0].legend(legend_lines, [input_data[3], input_data[4]], loc = 'lower right', prop={'size': 5})
 
-    img_path = os.getcwd() + (f'/plot/{input_data[5]}.png')
+    img_path = os.getcwd() + (f'/gui/plot/{input_data[5]}.png')
     plt.savefig(img_path, dpi = 200)

@@ -1,59 +1,55 @@
-import fastf1 as f1
-import pandas as pd
-from datetime import datetime
-import pyarrow
-import pyarrow._hdfs as pahdfs
-import tempfile
-from hdfs import InsecureClient
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
-# Create a temporary directory for caching
-temp_cache_dir = tempfile.gettempdir()
+# Initialize a Spark session
+spark = SparkSession.builder \
+    .appName("F1DataFromHDFS") \
+    .config("spark.hadoop.fs.defaultFS", "hdfs://<hdfs-cluster-ip>:9000") \
+    .getOrCreate()
 
-# Disable caching by setting a temporary directory
-f1.Cache.enable_cache(temp_cache_dir)
+# Function to read data from HDFS
+def read_hdfs_data(file_path):
+    # Use spark to read the data from HDFS
+    df = spark.read.option("header", "true").csv(file_path)
+    return df
 
-# Specify the seasons you want to fetch data for
-seasons = [2022, 2023, 2024]  # this doesn't work so manually enter the seasons and remove which ever.
+# Function to retrieve specific driver data from the HDFS-stored dataset
+def get_driver_data_from_hdfs(driver_id):
+    # HDFS path where F1 data is stored
+    hdfs_file_path = 'hdfs://<hdfs-cluster-ip>:9000/path/to/f1_driver_data.csv'
+    
+    # Read data from HDFS
+    f1_data_df = read_hdfs_data(hdfs_file_path)
+    
+    # Filter data based on driverId
+    driver_data_df = f1_data_df.filter(f1_data_df['driverId'] == driver_id)
+    
+    # Show the filtered driver data
+    driver_data_df.show()
 
-def fetch_season_data(season):
-    # Get all races in the season
-    races = f1.get_event_schedule(season)
-    for index, race in races.iterrows():
-        event = race['EventName']
-        race_date = race['EventDate']
-        year = race['EventDate'].year
-        round_number = race['RoundNumber']
-        print(f"Fetching data for {event} - Round {round_number}, {year}")
+    return driver_data_df
 
-        # Skip testing sessions
-        if 'testing' in event.lower() or 'pre-season' in event.lower():
-            print(f"Skipping testing event: {event}")
-            continue
-        
-        # Fetch session data
-        session = f1.get_session(year, round_number, 'R')  # 'R' stands for Race session
-        session.load()  # Load all available data
-        
-        # Check if the session has lap data
-        if session.laps is not None and not session.laps.empty:
-            df = session.laps  # Access lap data
-            
-            # Convert to pandas DataFrame if needed
-            df = pd.DataFrame(df)
-            
-            # Store to HDFS
-            save_to_hdfs(df, season, event)
-        else:
-            print(f"No lap data available for {event}. Session status: {session.status}")
+# Function to convert driver data into telemetry format
+def convert_to_telemetry(df):
+    # Select only telemetry-related columns
+    telemetry_df = df.select("lapNumber", "speed", "throttle", "brake", "gear", "rpm", "driverId")
+    
+    # Calculate speed difference between consecutive laps
+    window_spec = Window.partitionBy("driverId").orderBy("lapNumber")
+    telemetry_df = telemetry_df.withColumn("speed_diff", F.lag("speed").over(window_spec))
 
-def save_to_hdfs(df, season, event):
-    hdfs_path = f'/user/f1/data/{season}/{event}/laps.csv'
-    client = InsecureClient('http://localhost:9870', user='hadoop')
-    csv_data = df.to_csv(index=False).encode('utf-8')
-    client.write(hdfs_path, csv_data, overwrite=True)
-    print(f"Data for {event} saved to HDFS at {hdfs_path}")
+    # Show the telemetry data with the calculated speed difference
+    telemetry_df.show()
+    return telemetry_df
 
-
-# Loop through all specified seasons
-for season in seasons:
-    fetch_season_data(season)
+# Example usage
+if __name__ == "__main__":
+    # Specify the driver ID (e.g., 33 for Max Verstappen)
+    driver_id = 33
+    
+    # Fetch driver data from HDFS
+    driver_data = get_driver_data_from_hdfs(driver_id)
+    
+    # Convert the driver data into telemetry format
+    telemetry_data = convert_to_telemetry(driver_data)
