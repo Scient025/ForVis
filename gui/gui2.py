@@ -3,11 +3,12 @@ import sys
 import shutil
 import threading
 import pandas as pd
-from random import randint
 from PyQt5 import QtGui
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QComboBox, QApplication, QWidget, QHBoxLayout, QLabel, QPushButton, QProgressBar, QMessageBox, QVBoxLayout
+from PyQt5.QtWidgets import (QComboBox, QApplication, QWidget, 
+                             QGridLayout, QLabel, QPushButton, 
+                             QProgressBar, QMessageBox, QSizePolicy)
 from pyspark.sql import SparkSession
 # imports script2.py, used for creating plots
 import fileConfig2
@@ -43,40 +44,95 @@ location = ['Select Location']  # You might need to add this information manuall
 session = ['Race']  # Since this is race data
 analysis_type = ['Lap Time', 'Fastest Lap', 'Fastest Sectors', 'Full Telemetry']
 
-# stylesheet for progress bar
+# stylesheet for the application
 StyleSheet = '''
-#RedProgressBar {
-    min-height: 12px;
-    max-height: 12px;
-    border-radius: 2px;
-    border: .5px solid #808080;;
+QWidget {
+    background-color: #e8f5e9;  /* Light green background */
 }
-#RedProgressBar::chunk {
+
+QFrame {
+    border: 1px solid #cccccc;
+    border-radius: 10px;
+}
+
+QPushButton {
+    background-color: #1976d2;  /* Blue button */
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #1565c0;  /* Darker blue on hover */
+}
+
+QProgressBar {
+    min-height: 15px;
+    max-height: 15px;
     border-radius: 2px;
-    background-color: #DC0000;
+}
+
+QProgressBar::chunk {
+    border-radius: 2px;
+    background-color: #d32f2f;  /* Red progress bar */
     opacity: 1;
 }
-.warning-text {
-    color:#DC0000
+
+QLabel {
+    font-size: 12pt;
+    font-weight: 500;
+    font-family: 'Arial', sans-serif;
+}
+
+.title {
+    font-size: 24pt;  /* Increased title size */
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.description {
+    font-size: 12pt;  /* Increased description size */
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.header-area {
+    background-color: #bbdefb;  /* Light blue background */
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.fields-area {
+    background-color: #ffffff;  /* White background for fields */
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+
+.plot-area {
+    background-color: #bbdefb;  /* Light blue background for plot area */
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+
+QComboBox {
+    font-size: 14pt;  /* Increased font size for dropdowns */
+    padding: 5px;
 }
 '''
 
-# defines progressbar
+# defines progress bar
 class ProgressBar(QProgressBar):
     def __init__(self, *args, **kwargs):
         super(ProgressBar, self).__init__(*args, **kwargs)
         self.setValue(0)
-        if self.minimum() != self.maximum():
-            self.timer = QTimer(self, timeout=self.onTimeout)
-            self.timer.start(randint(1, 3) * 1000)
-
-    def onTimeout(self):
-        if self.value() >= 100:
-            self.timer.stop()
-            self.timer.deleteLater()
-            del self.timer
-            return
-        self.setValue(self.value() + 1)
+        self.setTextVisible(True)
+        self.setRange(0, 0)  # Indeterminate mode
 
 # main gui window 
 class MainWindow(QWidget):
@@ -86,75 +142,101 @@ class MainWindow(QWidget):
         self.UIComponents()
 
     def initUI(self):
-        self.setFixedSize(880, 525)
-        self.setWindowTitle('F1 Data Analysis')
+        self.setGeometry(0, 0, QApplication.primaryScreen().size().width(), QApplication.primaryScreen().size().height())
+        self.setWindowTitle('Formula 1 Telemetry Analytics')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(fileConfig2.IMG_DIR, 'f1.png')))
         self.setStyleSheet(StyleSheet)
 
     def UIComponents(self):
-        # Create labels
-        self.year_label = QLabel('Year:', self)
-        self.driver_label = QLabel('Driver:', self)
-        self.location_label = QLabel('Location:', self)
-        self.session_label = QLabel('Session:', self)
-        self.analysis_label = QLabel('Analysis:', self)
+        grid_layout = QGridLayout()
+        self.setLayout(grid_layout)
 
-        # Create combo boxes
-        self.year_combo = QComboBox(self)
-        self.driver_combo = QComboBox(self)
-        self.location_combo = QComboBox(self)
-        self.session_combo = QComboBox(self)
-        self.analysis_combo = QComboBox(self)
+        # Title and Description
+        header_area = QWidget()
+        header_layout = QGridLayout()
+        header_area.setLayout(header_layout)
 
-        # Add items to combo boxes
+        title = QLabel("Formula 1 Telemetry Analytics")
+        title.setStyleSheet("class: title")
+        header_layout.addWidget(title, 0, 0)
+
+        description = QLabel("Analyze race telemetry data and visualize performance metrics.")
+        description.setStyleSheet("class: description")
+        header_layout.addWidget(description, 1, 0)
+
+        grid_layout.addWidget(header_area, 0, 0, 1, 2)
+        header_area.setStyleSheet("class: header-area")
+
+        # Dropdowns
+        fields_area = QWidget()
+        fields_layout = QGridLayout()
+        fields_area.setLayout(fields_layout)
+        grid_layout.addWidget(fields_area, 1, 0)
+        fields_area.setStyleSheet("class: fields-area")
+
+        self.year_combo = QComboBox()
+        self.location_combo = QComboBox()
+        self.session_combo = QComboBox()
+        self.driver_combo = QComboBox()
+        self.analysis_combo = QComboBox()
+
+        self.warning_box = QMessageBox(self)
+        self.warning_box.setWindowTitle('Error!')
+        self.warning_box.setText('Select a valid race year.')
+        self.warning_box.setDefaultButton(QMessageBox.Ok)
+
+        labels = [
+            QLabel('Year:'),
+            QLabel('Grand Prix Location:'),
+            QLabel('Session:'),
+            QLabel('Driver:'),
+            QLabel('Analysis Type:')
+        ]
+
+        self.generate_button = QPushButton('Generate')
+        self.save_button = QPushButton('Save Plot to Desktop')
+
+        self.progress = ProgressBar(self, textVisible=False)
+
         self.year_combo.addItems(year)
-        self.driver_combo.addItems(driver_name)
         self.location_combo.addItems(location)
         self.session_combo.addItems(session)
+        self.driver_combo.addItems(driver_name)
         self.analysis_combo.addItems(analysis_type)
 
-        # Create buttons
-        self.generate_button = QPushButton('Generate', self)
+        for i, label in enumerate(labels):
+            fields_layout.addWidget(label, i, 0)
+            fields_layout.addWidget([self.year_combo, self.location_combo, self.session_combo, 
+                                     self.driver_combo, self.analysis_combo][i], i, 1)
+
+        fields_layout.addWidget(self.progress, len(labels), 0, 1, 2)
+        self.progress.hide()
+        fields_layout.addWidget(self.generate_button, len(labels) + 1, 0)
+        fields_layout.addWidget(self.save_button, len(labels) + 1, 1)
+        self.save_button.hide()
+
+        # Plot Area
+        plot_area = QWidget()
+        plot_layout = QGridLayout()
+        plot_area.setLayout(plot_layout)
+        grid_layout.addWidget(plot_area, 1, 1)  # Adjusted position for side-by-side layout
+        plot_area.setStyleSheet("class: plot-area")
+
+        # Make the image larger
+        self.image_label = QLabel()
+        self.image_label.setPixmap(QPixmap(placeholder_path).scaled(1200, 900, Qt.KeepAspectRatio))
+        plot_layout.addWidget(self.image_label, 0, 0)
+
+        # Setting the size policies
+        self.year_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.location_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.session_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.driver_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.analysis_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        self.year_combo.currentTextChanged.connect(self.update_lists)
         self.generate_button.clicked.connect(self.generate_plot)
-
-        # Create progress bar
-        self.progress = ProgressBar(self, objectName="RedProgressBar")
-        self.progress.setGeometry(30, 40, 200, 25)
-        self.progress.setMaximum(100)
-
-        # Create image label
-        self.image_label = QLabel(self)
-        self.image_label.setGeometry(340, 30, 500, 400)
-        pixmap = QPixmap(placeholder_path)
-        self.image_label.setPixmap(pixmap)
-
-        # Create layouts
-        main_layout = QHBoxLayout()
-        left_layout = QVBoxLayout()
-        right_layout = QVBoxLayout()
-
-        # Add widgets to left layout
-        left_layout.addWidget(self.year_label)
-        left_layout.addWidget(self.year_combo)
-        left_layout.addWidget(self.driver_label)
-        left_layout.addWidget(self.driver_combo)
-        left_layout.addWidget(self.location_label)
-        left_layout.addWidget(self.location_combo)
-        left_layout.addWidget(self.session_label)
-        left_layout.addWidget(self.session_combo)
-        left_layout.addWidget(self.analysis_label)
-        left_layout.addWidget(self.analysis_combo)
-        left_layout.addWidget(self.generate_button)
-        left_layout.addWidget(self.progress)
-
-        # Add widgets to right layout
-        right_layout.addWidget(self.image_label)
-
-        # Add layouts to main layout
-        main_layout.addLayout(left_layout)
-        main_layout.addLayout(right_layout)
-
-        # Set main layout
-        self.setLayout(main_layout)
+        self.save_button.clicked.connect(self.save_plot)
 
     def generate_plot(self):
         # Get selected values
@@ -170,7 +252,7 @@ class MainWindow(QWidget):
             return
 
         # Start progress bar
-        self.progress.setValue(0)
+        self.progress.show()
 
         # Generate plot in a separate thread
         thread = threading.Thread(target=self.generate_plot_thread, args=(selected_year, selected_driver, selected_location, selected_session, selected_analysis))
@@ -187,18 +269,24 @@ class MainWindow(QWidget):
         elif analysis == 'Full Telemetry':
             plot_path = script2.full_telemetry_analysis(race_df, driver)
 
-        # Update progress bar
-        for i in range(101):
-            self.progress.setValue(i)
-            QApplication.processEvents()
-
         # Display the generated plot
         pixmap = QPixmap(plot_path)
-        self.image_label.setPixmap(pixmap)
-        self.image_label.setScaledContents(True)
+        self.image_label.setPixmap(pixmap.scaled(1200, 900, Qt.KeepAspectRatio))
 
-        # Clean up temporary files
-        os.remove(plot_path)
+        # Hide progress bar and show save button
+        self.progress.hide()
+        self.save_button.show()
+
+        # Store the plot path for saving
+        self.plot_path = plot_path
+
+    def save_plot(self):
+        desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+        shutil.copy(self.plot_path, desktop_path)
+
+    def update_lists(self):
+        # This method should be implemented to update other dropdowns based on the selected year
+        pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
