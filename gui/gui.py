@@ -3,11 +3,13 @@ import sys
 import shutil
 import threading
 import pandas as pd
-from random import randint
 from PyQt5 import QtGui
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QComboBox, QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar, QMessageBox
+from PyQt5.QtWidgets import (QComboBox, QApplication, QWidget, 
+                             QGridLayout, QLabel, QPushButton, 
+                             QProgressBar, QMessageBox, QSizePolicy)
+
 # imports script.py, used for creating plots
 import script
 import fileConfig
@@ -19,51 +21,104 @@ race_laps = pd.read_csv(fileConfig.RACE_LAPS_CSV)
 placeholder_path = fileConfig.PLACEHOLDER_IMG
 
 # active race years
-year = events.columns
-year = year[1:len(year)].to_list()
+year = events.columns[1:].tolist()
 year.insert(0, 'Select Year')
 
 # values for dropdown labels
-driver_name = drivers
 location = ['Select Location']
-session = ['Race', 'Qualifying', 'FP1', 'FP2', 'FP3']  # 'Sprint Qualifying', 'Sprint' : removed until data is consistent
+session = ['Race', 'Qualifying', 'FP1', 'FP2', 'FP3']
 driver_name = ['Select Driver']
 analysis_type = ['Lap Time', 'Fastest Lap', 'Fastest Sectors', 'Full Telemetry']
 
-# stylesheet for progress bar
+# stylesheet for the application
 StyleSheet = '''
-#RedProgressBar {
-    min-height: 12px;
-    max-height: 12px;
-    border-radius: 2px;
-    border: .5px solid #808080;;
+QWidget {
+    background-color: #e8f5e9;  /* Light green background */
 }
-#RedProgressBar::chunk {
+
+QFrame {
+    border: 1px solid #cccccc;
+    border-radius: 10px;
+}
+
+QPushButton {
+    background-color: #1976d2;  /* Blue button */
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #1565c0;  /* Darker blue on hover */
+}
+
+QProgressBar {
+    min-height: 15px;
+    max-height: 15px;
     border-radius: 2px;
-    background-color: #DC0000;
+}
+
+QProgressBar::chunk {
+    border-radius: 2px;
+    background-color: #d32f2f;  /* Red progress bar */
     opacity: 1;
 }
-.warning-text {
-    color:#DC0000
+
+QLabel {
+    font-size: 12pt;
+    font-weight: 500;
+    font-family: 'Arial', sans-serif;
+}
+
+.title {
+    font-size: 24pt;  /* Increased title size */
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.description {
+    font-size: 12pt;  /* Increased description size */
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.header-area {
+    background-color: #bbdefb;  /* Light blue background */
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.fields-area {
+    background-color: #ffffff;  /* White background for fields */
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+
+.plot-area {
+    background-color: #bbdefb;  /* Light blue background for plot area */
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+
+QComboBox {
+    font-size: 14pt;  /* Increased font size for dropdowns */
+    padding: 5px;
 }
 '''
 
-# defines progressbar
+# defines progress bar
 class ProgressBar(QProgressBar):
     def __init__(self, *args, **kwargs):
         super(ProgressBar, self).__init__(*args, **kwargs)
         self.setValue(0)
-        if self.minimum() != self.maximum():
-            self.timer = QTimer(self, timeout=self.onTimeout)
-            self.timer.start(randint(1, 3) * 1000)
-
-    def onTimeout(self):
-        if self.value() >= 100:
-            self.timer.stop()
-            self.timer.deleteLater()
-            del self.timer
-            return
-        self.setValue(self.value() + 1)
+        self.setTextVisible(True)
+        self.setRange(0, 0)  # Indeterminate mode
 
 # main gui window 
 class MainWindow(QWidget):
@@ -73,15 +128,37 @@ class MainWindow(QWidget):
         self.UIComponents()
 
     def initUI(self):
-        self.setFixedSize(880, 525)
-        self.move(200, 100)
+        self.setGeometry(0, 0, QApplication.primaryScreen().size().width(), QApplication.primaryScreen().size().height())
         self.setWindowTitle('Formula 1 Telemetry Analytics')
         self.setWindowIcon(QtGui.QIcon(os.path.join(fileConfig.IMG_DIR, 'f1.png')))
+        self.setStyleSheet(StyleSheet)
 
     def UIComponents(self):
-        options_layout = QVBoxLayout()
-        img_layout = QHBoxLayout()
-        img_layout.addLayout(options_layout)  # two layouts to allow split screen view
+        grid_layout = QGridLayout()
+        self.setLayout(grid_layout)
+
+        # Title and Description
+        header_area = QWidget()
+        header_layout = QGridLayout()
+        header_area.setLayout(header_layout)
+
+        title = QLabel("Formula 1 Telemetry Analytics")
+        title.setStyleSheet("class: title")
+        header_layout.addWidget(title, 0, 0)
+
+        description = QLabel("Analyze race telemetry data and visualize performance metrics.")
+        description.setStyleSheet("class: description")
+        header_layout.addWidget(description, 1, 0)
+
+        grid_layout.addWidget(header_area, 0, 0, 1, 2)
+        header_area.setStyleSheet("class: header-area")
+
+        # Dropdowns
+        fields_area = QWidget()
+        fields_layout = QGridLayout()
+        fields_area.setLayout(fields_layout)
+        grid_layout.addWidget(fields_area, 1, 0)
+        fields_area.setStyleSheet("class: fields-area")
 
         self.drop_year = QComboBox()
         self.drop_grand_prix = QComboBox()
@@ -96,18 +173,19 @@ class MainWindow(QWidget):
         self.warning_box.setText('Select a valid race year.')
         self.warning_box.setDefaultButton(QMessageBox.Ok)
 
-        label_year = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Year: </span>')
-        label_prix = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Grand Prix Location: </span>')
-        label_session = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Session: </span>')
-        label_d1 = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Driver 1: </span>')
-        label_d2 = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Driver 2: </span>')
-        label_analysis = QLabel('<span style="font-size:8.5pt; font-weight: 500"> Analysis Type: </span>')
+        labels = [
+            QLabel('Year:'),
+            QLabel('Grand Prix Location:'),
+            QLabel('Session:'),
+            QLabel('Driver 1:'),
+            QLabel('Driver 2:'),
+            QLabel('Analysis Type:')
+        ]
 
         self.run_button = QPushButton('Run Analysis')
         self.save_button = QPushButton('Save Plot to Desktop')
 
-        self.pbar = ProgressBar(self, minimum=0, maximum=0, textVisible=False,
-                                objectName="RedProgressBar")
+        self.pbar = ProgressBar(self, textVisible=False)
 
         self.drop_year.addItems(year)
         self.drop_grand_prix.addItems(location)
@@ -116,27 +194,38 @@ class MainWindow(QWidget):
         self.drop_driver2.addItems(driver_name)
         self.drop_analysis.addItems(analysis_type)
 
-        options_layout.addWidget(label_year)
-        options_layout.addWidget(self.drop_year)
-        options_layout.addWidget(label_prix)
-        options_layout.addWidget(self.drop_grand_prix)
-        options_layout.addWidget(label_session)
-        options_layout.addWidget(self.drop_session)
-        options_layout.addWidget(label_d1)
-        options_layout.addWidget(self.drop_driver1)
-        options_layout.addWidget(label_d2)
-        options_layout.addWidget(self.drop_driver2)
-        options_layout.addWidget(label_analysis)
-        options_layout.addWidget(self.drop_analysis)
-        options_layout.addWidget(self.lap_number)
+        for i, label in enumerate(labels):
+            fields_layout.addWidget(label, i, 0)
+            fields_layout.addWidget([self.drop_year, self.drop_grand_prix, self.drop_session, 
+                                     self.drop_driver1, self.drop_driver2, self.drop_analysis][i], i, 1)
+
+        fields_layout.addWidget(self.lap_number, len(labels), 0, 1, 2)
         self.lap_number.hide()
-        options_layout.addWidget(self.pbar)
+        fields_layout.addWidget(self.pbar, len(labels) + 1, 0, 1, 2)
         self.pbar.hide()
-        options_layout.addWidget(self.run_button)
-        options_layout.addWidget(self.save_button)
+        fields_layout.addWidget(self.run_button, len(labels) + 2, 0)
+        fields_layout.addWidget(self.save_button, len(labels) + 2, 1)
         self.save_button.hide()
 
-        options_layout.addStretch()
+        # Plot Area
+        plot_area = QWidget()
+        plot_layout = QGridLayout()
+        plot_area.setLayout(plot_layout)
+        grid_layout.addWidget(plot_area, 1, 1)  # Adjusted position for side-by-side layout
+        plot_area.setStyleSheet("class: plot-area")
+
+        # Make the image larger
+        self.img_plot = QLabel()
+        self.img_plot.setPixmap(QPixmap(placeholder_path).scaled(1200, 900, Qt.KeepAspectRatio))
+        plot_layout.addWidget(self.img_plot, 0, 0)
+
+        # Setting the size policies
+        self.drop_year.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.drop_grand_prix.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.drop_session.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.drop_driver1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.drop_driver2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.drop_analysis.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         self.drop_year.currentTextChanged.connect(self.update_lists)
         self.run_button.clicked.connect(self.thread_script)
@@ -144,56 +233,39 @@ class MainWindow(QWidget):
         self.drop_analysis.currentTextChanged.connect(self.add_laps)
         self.drop_grand_prix.currentTextChanged.connect(self.update_laps)
 
-        self.img_plot = QLabel()
-        self.img_plot.setPixmap(QPixmap(placeholder_path).scaledToWidth(625))
-        img_layout.addWidget(self.img_plot)
-
-        self.setLayout(img_layout)
-
     def current_text(self):
-        input_data = []
-        text = self.drop_year.currentText()
-        input_data.append(text)
-        text = self.drop_grand_prix.currentText()
-        input_data.append(text)
-        text = self.drop_session.currentText()
-        input_data.append(text)
-        text = self.drop_driver1.currentText()
-        input_data.append(text)
-        text = self.drop_driver2.currentText()
-        input_data.append(text)
-        text = self.drop_analysis.currentText()
-        input_data.append(text)
-        text = self.lap_number.currentText()
-        input_data.append(text)
+        input_data = [
+            self.drop_year.currentText(),
+            self.drop_grand_prix.currentText(),
+            self.drop_session.currentText(),
+            self.drop_driver1.currentText(),
+            self.drop_driver2.currentText(),
+            self.drop_analysis.currentText(),
+            self.lap_number.currentText()
+        ]
         return input_data
 
     def display_plot(self, plot_path):
-        self.img_plot.setPixmap(QPixmap(plot_path).scaledToWidth(625))
+        self.img_plot.setPixmap(QPixmap(plot_path).scaled(1200, 900, Qt.KeepAspectRatio))
 
     def save_plot(self):
         desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
         shutil.copy(self.plot_path, desktop_path)
 
     def add_laps(self):
-        if self.drop_analysis.currentText() == 'Fastest Sectors':
-            self.lap_number.show()
-        else:
-            self.lap_number.hide()
+        self.lap_number.setVisible(self.drop_analysis.currentText() == 'Fastest Sectors')
 
     def update_laps(self):
-        if self.drop_grand_prix.currentText() != '':
+        if self.drop_grand_prix.currentText():
             self.lap_number.clear()
             lap_val = ['Select Lap']
             race = self.drop_grand_prix.currentText()
             total_laps = race_laps.loc[race_laps.event == race, 'laps'].values[0]
-            lap_val.extend(range(1, total_laps + 1))
-            lap_val = map(str, lap_val)
+            lap_val.extend(map(str, range(1, total_laps + 1)))
             self.lap_number.addItems(lap_val)
 
     def thread_script(self):
-        thread_script = threading.Thread(target=self.button_listen)
-        thread_script.start()
+        threading.Thread(target=self.button_listen).start()
 
     def button_listen(self):
         input_data = self.current_text()
@@ -216,13 +288,14 @@ class MainWindow(QWidget):
             self.drop_grand_prix.clear()
             self.drop_driver1.clear()
             self.drop_driver2.clear()
-            self.drop_grand_prix.addItems(events[str(sel_year)].dropna().to_list())
-            self.drop_driver1.addItems(drivers[str(sel_year)].dropna().to_list())
-            self.drop_driver2.addItems(drivers[str(sel_year)].dropna().to_list())
+            valid_grand_prix = events[str(sel_year)].dropna().to_list()
+            valid_drivers = drivers[str(sel_year)].dropna().to_list()
+            self.drop_grand_prix.addItems(valid_grand_prix)
+            self.drop_driver1.addItems(valid_drivers)
+            self.drop_driver2.addItems(valid_drivers)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    app.setStyleSheet(StyleSheet)
     mw = MainWindow()
     mw.show()
     sys.exit(app.exec_())
