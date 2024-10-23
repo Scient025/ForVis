@@ -11,6 +11,8 @@ from matplotlib.lines import Line2D
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 import fileConfig
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 
 # enables cache, allows storage of race data locally
 # ff1.Cache.enable_cache('formula/cache')
@@ -21,18 +23,35 @@ ff1.plotting.setup_mpl(mpl_timedelta_support = True, color_scheme = 'fastf1')
 # gets race data from fastf1 based on input data parameter
 # runs appropriate plot function based on user input
 def get_race_data(input_data):
-    #['2022', 'Austria', 'FP1', 'VER', 'VER', 'Lap Time']
-    race = ff1.get_session(int(input_data[0]), input_data[1], input_data[2])
-    race.load()
-
-    if input_data[5] == 'Lap Time':
-        plot_laptime(race, input_data)
-    elif input_data[5] == 'Fastest Lap':
-        plot_fastest_lap(race, input_data)
-    elif input_data[5] == 'Fastest Sectors':
-        plot_fastest_sectors(race, input_data)
-    elif input_data[5] == 'Full Telemetry':
-        plot_full_telemetry(race, input_data)
+    try:
+        year = int(input_data[0])
+        gp = input_data[1]
+        session = input_data[2]
+        print(f"Loading data for {year} {gp} {session}")
+        race = ff1.get_session(year, gp, session)
+        race.load()
+        print(f"Loaded data for {len(race.laps)} laps")
+        print(f"Available drivers: {race.drivers}")
+        
+        if input_data[5] == 'Temperature and Tyre Life vs. Lap Time':
+            plot_temp_tyre_laptime(race, input_data)
+        elif input_data[5] == 'Lap Time':
+            plot_laptime(race, input_data)
+        elif input_data[5] == 'Fastest Lap':
+            plot_fastest_lap(race, input_data)
+        elif input_data[5] == 'Fastest Sectors':
+            plot_fastest_sectors(race, input_data)
+        elif input_data[5] == 'Full Telemetry':
+            plot_full_telemetry(race, input_data)
+        elif input_data[5] == 'Tyre Compound and Stint Analysis':
+            plot_tyre_stint_analysis(race, input_data)
+        elif input_data[5] == 'Position Changes':
+            plot_position_changes(race, input_data)
+    except Exception as e:
+        print(f"An error occurred in get_race_data: {str(e)}")
+        print("Error details:")
+        import traceback
+        traceback.print_exc()
 
 # takes in speed/distance data for both drivers and determines which is faster
 # returns dataframe of which driver was the fastest in each sector
@@ -244,3 +263,281 @@ def plot_full_telemetry(race, input_data): # speed, throttle, brake, rpm, gear, 
         os.makedirs(fileConfig.PLOT_DIR)
     img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
     plt.savefig(img_path, dpi=700)
+
+def plot_tyre_stint_analysis(race, input_data):
+    plt.clf()
+    fig, ax = plt.subplots(figsize=(15, 10))
+    fig.patch.set_facecolor('#2F2F2F')
+    ax.set_facecolor('#2F2F2F')
+
+    # Get list of drivers
+    drivers = race.results['Abbreviation'].tolist()
+
+    # Create a dictionary to store tyre data for each driver
+    tyre_data = {driver: [] for driver in drivers}
+
+    # Collect tyre data for each driver
+    for driver in drivers:
+        stints = race.laps.pick_driver(driver).groupby('Stint')
+        for stint, data in stints:
+            compound = data['Compound'].iloc[0]
+            start_lap = data['LapNumber'].min()
+            end_lap = data['LapNumber'].max()
+            tyre_data[driver].append((start_lap, end_lap, compound))
+
+    # Define colors for each compound
+    compound_colors = {
+        'SOFT': 'red',
+        'MEDIUM': 'yellow',
+        'HARD': 'white',
+        'INTERMEDIATE': 'green',
+        'WET': 'blue'
+    }
+
+    gap = 0.1  # Size of the gap between different tyre compounds
+
+    # Plot tyre stints for each driver
+    for i, (driver, stints) in enumerate(tyre_data.items()):
+        previous_compound = None
+        for start, end, compound in stints:
+            if previous_compound and previous_compound != compound:
+                # Add a small gap if the compound has changed
+                start += gap / 2
+            
+            ax.barh(i, end - start, left=start, height=0.6, 
+                    color=compound_colors.get(compound, 'gray'), alpha=0.7)
+            ax.text((start + end) / 2, i, compound, ha='center', va='center', color='black', fontweight='bold')
+            
+            previous_compound = compound
+
+    # Customize the plot
+    ax.set_yticks(range(len(drivers)))
+    ax.set_yticklabels(drivers, color='white')
+    ax.set_xlabel('Lap Number', color='white')
+    ax.set_title(f'Tyre Stint Analysis - {race.event.year} {race.event["EventName"]} {input_data[2]}', color='white')
+
+    # Add a legend
+    legend_elements = [plt.Rectangle((0, 0), 1, 1, facecolor=color, edgecolor='none', alpha=0.7, label=compound)
+                       for compound, color in compound_colors.items()]
+    ax.legend(handles=legend_elements, loc='upper right', title='Tyre Compounds', facecolor='#2F2F2F', edgecolor='white')
+    ax.get_legend().get_title().set_color('white')
+    for text in ax.get_legend().get_texts():
+        text.set_color('white')
+
+    # Add grid lines
+    ax.grid(True, axis='x', linestyle='--', alpha=0.3, color='white')
+
+    # Set x-axis color to white
+    ax.tick_params(axis='x', colors='white')
+
+    # Adjust layout and save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png"), facecolor='#2F2F2F', edgecolor='none')
+    plt.close(fig)
+
+def plot_pitstop_impact(race, input_data):
+    plt.clf()
+    
+    d1 = input_data[3].split()[0]
+    d2 = input_data[4].split()[0]
+
+    laps_d1 = race.laps.pick_driver(d1)
+    laps_d2 = race.laps.pick_driver(d2)
+
+    fig, ax = plt.subplots(figsize=(15, 8))
+
+    for driver, laps, color in zip([d1, d2], [laps_d1, laps_d2], ['blue', 'red']):
+        ax.plot(laps['LapNumber'], laps['LapTime'], color=color, label=driver)
+        
+        pit_stops = laps[laps['PitOutTime'].notnull()]
+        for _, pit_stop in pit_stops.iterrows():
+            ax.axvline(x=pit_stop['LapNumber'], color=color, linestyle='--', alpha=0.5)
+            ax.text(pit_stop['LapNumber'], ax.get_ylim()[1], f"{driver} Pit", 
+                    rotation=90, verticalalignment='top', color=color)
+
+    ax.set_xlabel('Lap Number')
+    ax.set_ylabel('Lap Time')
+    ax.set_title(f'Pit Stop Impact on Race Pace\n{race.event.year} {race.event["EventName"]} {input_data[2]}')
+    ax.legend()
+
+    plt.tight_layout()
+    
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
+    plt.savefig(img_path, dpi=700, bbox_inches='tight')
+    plt.close(fig)
+
+def plot_position_changes(race, input_data):
+    plt.clf()
+    
+    year = int(input_data[0])
+    gp = input_data[1]
+    session = input_data[2]
+    d1 = input_data[3].split()[0]
+    d2 = input_data[4].split()[0]
+
+    print(f"Plotting position changes for {year} {gp} {session}")
+    
+    # Ensure we're using the correct race data
+    race = ff1.get_session(year, gp, session)
+    race.load()
+
+    laps_d1 = race.laps.pick_driver(d1)
+    laps_d2 = race.laps.pick_driver(d2)
+
+    fig, ax = plt.subplots(figsize=(15, 8))
+    fig.patch.set_facecolor('#2F2F2F')
+    ax.set_facecolor('#2F2F2F')
+
+    colors = ['#00FFFF', '#FF69B4']  # Cyan and Hot Pink for better visibility
+    for driver, laps, color in zip([d1, d2], [laps_d1, laps_d2], colors):
+        # Get starting position
+        try:
+            starting_position = race.results.loc[race.results['Abbreviation'] == driver, 'GridPosition'].values[0]
+        except IndexError:
+            print(f"Warning: Starting position not found for {driver}. Using first lap position.")
+            starting_position = laps['Position'].iloc[0] if not laps.empty else 20  # Default to last place if no data
+
+        # Create a new DataFrame with starting position
+        position_data = pd.DataFrame({'LapNumber': [0] + laps['LapNumber'].tolist(),
+                                      'Position': [starting_position] + laps['Position'].tolist()})
+        
+        ax.plot(position_data['LapNumber'], position_data['Position'], color=color, label=f"{driver}", linewidth=2)
+        
+        # Highlight pit stops
+        pit_stops = laps[laps['PitOutTime'].notnull()]
+        for _, pit_stop in pit_stops.iterrows():
+            ax.scatter(pit_stop['LapNumber'], pit_stop['Position'], color=color, s=100, marker='s')
+            ax.annotate('Pit', (pit_stop['LapNumber'], pit_stop['Position']), xytext=(5, 5), 
+                        textcoords='offset points', color=color, fontsize=10, fontweight='bold')
+
+    # Highlight safety car periods
+    safety_car_periods = race.laps['IsAccurate'] == False
+    if safety_car_periods.any():
+        safety_car_starts = race.laps.loc[safety_car_periods & ~safety_car_periods.shift(1, fill_value=False)]['LapNumber']
+        safety_car_ends = race.laps.loc[safety_car_periods & ~safety_car_periods.shift(-1, fill_value=False)]['LapNumber']
+        for start, end in zip(safety_car_starts, safety_car_ends):
+            ax.axvspan(start, end, alpha=0.3, color='yellow')
+            ax.annotate('SC', (start, ax.get_ylim()[0]), xytext=(0, 10), 
+                        textcoords='offset points', color='yellow', fontsize=12, fontweight='bold')
+
+    ax.set_xlabel('Lap Number', color='white', fontsize=12)
+    ax.set_ylabel('Position', color='white', fontsize=12)
+    ax.set_title(f'Position Changes Over Time\n{year} {gp} {session}', 
+                 color='white', fontsize=16, fontweight='bold')
+    
+    ax.legend(fontsize=12, loc='upper right', facecolor='#2F2F2F', edgecolor='white', labelcolor='white')
+    ax.grid(True, color='gray', alpha=0.3)
+    ax.tick_params(colors='white', labelsize=10)
+    
+    ax.set_ylim(20.5, 0.5)  # Reverse y-axis and set integer ticks
+    ax.set_yticks(range(1, 21))
+    ax.set_xlim(left=0)
+
+    plt.tight_layout()
+    
+    if not os.path.exists(fileConfig.PLOT_DIR):
+        os.makedirs(fileConfig.PLOT_DIR)
+    img_path = os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png")
+    plt.savefig(img_path, dpi=300, bbox_inches='tight', facecolor='#2F2F2F')
+    plt.close(fig)
+
+    print(f"Position changes plot saved for {year} {gp} {session}")
+
+def plot_temp_tyre_laptime(race, input_data):
+    driver = input_data[3]
+    laps = race.laps.pick_drivers(driver).reset_index()
+    
+    print(f"Total laps for {driver}: {len(laps)}")
+    
+    if len(laps) == 0:
+        print(f"No lap data found for driver {driver}")
+        return
+
+    print("Available columns:", laps.columns.tolist())
+
+    # Ensure required columns are present
+    required_cols = ['LapNumber', 'LapTime', 'TyreLife', 'TrackStatus', 'LapStartDate']
+    missing_cols = [col for col in required_cols if col not in laps.columns]
+    if missing_cols:
+        print(f"Missing columns: {missing_cols}")
+        return
+
+    # Convert LapTime to seconds
+    laps['LapTimeSeconds'] = laps['LapTime'].dt.total_seconds()
+
+    # Ensure TyreLife is numeric
+    laps['TyreLife'] = pd.to_numeric(laps['TyreLife'], errors='coerce')
+
+    # Sort by LapNumber
+    laps = laps.sort_values(by='LapNumber')
+
+    # Use TrackStatus as a proxy for Track Temperature if actual temperature is not available
+    if 'TrackTemp' not in laps.columns:
+        print("TrackTemp not found. Using TrackStatus as a proxy.")
+        laps['TrackTemp'] = laps['TrackStatus'].astype(float)
+
+    print("Data summary:")
+    print(laps[['LapNumber', 'LapTimeSeconds', 'TyreLife', 'TrackTemp']].describe())
+    print("\nFirst few rows:")
+    print(laps[['LapNumber', 'LapTimeSeconds', 'TyreLife', 'TrackTemp']].head())
+
+    if laps['LapTimeSeconds'].isnull().all() or laps['TyreLife'].isnull().all():
+        print("All LapTimeSeconds or TyreLife values are null. Cannot plot.")
+        return
+
+    # Create the plot
+    fig, ax1 = plt.subplots(figsize=(12, 8))
+
+    # Plot Lap Time vs. Tyre Life
+    sns.scatterplot(x='TyreLife', y='LapTimeSeconds', data=laps, ax=ax1, hue='TrackTemp', palette='coolwarm', legend=False)
+    sns.lineplot(x='TyreLife', y='LapTimeSeconds', data=laps, ax=ax1, color='blue', alpha=0.5)
+
+    # Set axis labels and title
+    ax1.set_xlabel('Tyre Life (Laps)')
+    ax1.set_ylabel('Lap Time (seconds)')
+    plt.title(f'{driver} - Tyre Life and Track Temperature vs Lap Time\n{race.event.year} {race.event["EventName"]} {input_data[2]}')
+
+    # Add a color bar for the track temperature
+    sm = plt.cm.ScalarMappable(cmap='coolwarm', norm=plt.Normalize(vmin=laps['TrackTemp'].min(), vmax=laps['TrackTemp'].max()))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax1)
+    cbar.set_label('Track Temperature Proxy')
+
+    # Add annotations for pit stops
+    pit_stops = laps[laps['PitOutTime'].notnull()]
+    for idx, pit_stop in pit_stops.iterrows():
+        ax1.annotate('Pit', (pit_stop['TyreLife'], pit_stop['LapTimeSeconds']),
+                     xytext=(5, 5), textcoords='offset points', ha='left', va='bottom',
+                     bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
+                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+
+    # Add a grid for better readability
+    ax1.grid(True, linestyle='--', alpha=0.7)
+
+    # Adjust layout and save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(fileConfig.PLOT_DIR, f"{input_data[5]}.png"))
+    plt.close()
+
+    print(f"Plot saved as {input_data[5]}.png")
+
+def plot_any_function(race, input_data):
+    year = int(input_data[0])
+    gp = input_data[1]
+    session = input_data[2]
+    driver1 = input_data[3]
+    driver2 = input_data[4]
+    analysis_type = input_data[5]
+    lap_number = input_data[6] if len(input_data) > 6 else None
+
+    # Use these variables in your function
+    # ...
+
+    plt.title(f"{analysis_type}\n{year} {gp} {session}")
+    # ... rest of the plotting code ...
+
+
+
+

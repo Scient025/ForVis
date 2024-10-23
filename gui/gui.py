@@ -31,7 +31,7 @@ year.insert(0, 'Select Year')
 location = ['Select Location']
 session = ['Race', 'Qualifying', 'FP1', 'FP2', 'FP3']
 driver_name = ['Select Driver']
-analysis_type = ['Lap Time', 'Fastest Lap', 'Fastest Sectors', 'Full Telemetry']
+analysis_type = ['Lap Time', 'Fastest Lap', 'Fastest Sectors', 'Full Telemetry', 'Tyre Compound and Stint Analysis', 'Pit Stop Impact', 'Fuel Usage Impact', 'Position Changes']
 
 StyleSheet = '''
 QWidget {
