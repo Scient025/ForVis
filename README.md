@@ -40,11 +40,8 @@ A comprehensive data visualization tool built with Python to analyze Formula 1 t
 
 ## 🚀 Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Scient025/ForVis.git
-   cd ForVis
-   ```
+1. Clone the repository.
+  
 
 2. Install required packages:
    ```bash
