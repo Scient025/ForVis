@@ -136,11 +136,15 @@ python app.py
 
 ## Output Images
 1. Visualization GUI -
-   ![output1](https://github.com/user-attachments/assets/ad5e5a13-6ce2-4175-a242-8e6aced8f6ce)
+   
+  ![output1](https://github.com/user-attachments/assets/ad5e5a13-6ce2-4175-a242-8e6aced8f6ce)
+
 
   ![output2](https://github.com/user-attachments/assets/941d60ba-b915-4328-8ca2-aaaaef90ebde)
 
+
   ![output3](https://github.com/user-attachments/assets/91f34012-4fd4-4e51-a45d-efc89f8079cf)
+
 
   ![output4](https://github.com/user-attachments/assets/dc9abb1f-7bb3-4b7f-9e83-f702e1090793)
 
