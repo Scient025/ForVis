@@ -1,4 +1,4 @@
-# BRANDON TEST F1 Data Visualization 🏎️
+# F1 Data Visualization 🏎️
 
 A comprehensive data visualization tool built with Python to analyze Formula 1 telemetry and real-time data. This application provides insights into race performance, lap times, and various other metrics through an interactive GUI interface.
 
