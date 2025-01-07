@@ -1,5 +1,5 @@
-from app import app  # Import the Dash app
-from spark import spark  # Import the Spark session
+from Dash.app import app  # Import the Dash app
+from ForVis.Dash.spark import spark  # Import the Spark session
 import threading
 
 # Function to run Spark processing in a separate thread

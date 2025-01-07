@@ -5,7 +5,6 @@ from matplotlib.figure import Figure
 import fastf1
 
 
-
 class F1TelemetryApp(QWidget):
     def __init__(self):
         super().__init__()

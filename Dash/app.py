@@ -1,7 +1,7 @@
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
-from spark import load_data_from_hdfs, transform_data
+from ForVis.Dash.spark import load_data_from_hdfs, transform_data
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
