@@ -1,4 +1,4 @@
-![output1](https://github.com/user-attachments/assets/7d2964c5-690e-40f8-ad92-a7df3cb775e0)# F1 Data Visualization 🏎️
+# F1 Data Visualization 🏎️
 
 A comprehensive data visualization tool built with Python to analyze Formula 1 telemetry and real-time data. This application provides insights into race performance, lap times, and various other metrics through an interactive GUI interface.
 
