@@ -1,4 +1,4 @@
-# F1 Data Visualization 🏎️
+# BRANDON TEST F1 Data Visualization 🏎️
 
 A comprehensive data visualization tool built with Python to analyze Formula 1 telemetry and real-time data. This application provides insights into race performance, lap times, and various other metrics through an interactive GUI interface.
 
@@ -6,6 +6,7 @@ A comprehensive data visualization tool built with Python to analyze Formula 1 t
 
 - Real-time telemetry data visualization
 - Multiple analysis types:
+
   - Lap Time Analysis
   - Fastest Lap Comparison
   - Fastest Sectors Analysis
@@ -41,9 +42,9 @@ A comprehensive data visualization tool built with Python to analyze Formula 1 t
 ## 🚀 Installation
 
 1. Clone the repository.
-  
 
 2. Install required packages:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -55,19 +56,25 @@ A comprehensive data visualization tool built with Python to analyze Formula 1 t
 ## 💻 Usage
 
 ### GUI Application
+
 Run the main GUI application:
+
 ```bash
 python gui.py
 ```
 
 ### Model Prediction Window
+
 For standalone model predictions:
+
 ```bash
 python gui_model.py
 ```
 
 ### Web Dashboard
+
 Launch the Dash web interface:
+
 ```bash
 python app.py
 ```
@@ -75,14 +82,17 @@ python app.py
 ## 📊 Available Analysis Types
 
 1. **Lap Time Analysis**
+
    - Compare lap times between drivers
    - Track performance evolution
 
 2. **Fastest Lap Analysis**
+
    - Identify and analyze fastest laps
    - Sector-by-sector breakdown
 
 3. **Full Telemetry**
+
    - Speed traces
    - Throttle/brake patterns
    - Gear usage analysis
@@ -95,16 +105,19 @@ python app.py
 ## 🔄 Data Pipeline
 
 1. Data Collection (`fastf1`)
+
    - Live timing data
    - Historical race data
    - Driver telemetry
 
 2. Processing (Spark)
+
    - Data cleaning
    - Feature engineering
    - Performance calculations
 
 3. Storage (HDFS)
+
    - Raw data storage
    - Processed datasets
    - Model artifacts
